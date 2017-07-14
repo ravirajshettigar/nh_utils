@@ -1,0 +1,14 @@
+{
+    "file_types": [], 
+    "last_run": "2017-07-14 08:14:07.865000", 
+    "project_home": "C:\\PaP\\v5.3.6\\PatientPortal",
+    "carefx_home" : "C:\\PrP_Carefx",
+    "servicemix_home" : "C:\\PrP_Carefx\\Resources\\hsip",
+    "java_home" : "C:\\Program Files\\Java\\jdk1.7.0_80",
+    "catalina_home" : "C:\\Development\\servers\\apache_tomcat_pap",
+    "catalina_opts" : "-Dcarefx.props.dir=%CAREFX_HOME%\\Common\\properties -Dcarefx.common.dir=%CAREFX_HOME%\\Common -Dcarefx.cfgprop.impl=net.carefx.config.filesystem.impl.CfgPropertiesImpl -XX:MaxPermSize=512m -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=4711 -Xms1024m -Xmx2048m -DproxySet=true -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9999",
+    "karaf_opts" : "-DproxySet=true -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9999 -Xdebug -Xrunjdwp:transport=dt_socket,address=5711,server=y,suspend=n",
+    "maven_home" : "C:\\Development\\maven",
+    "maven_opts" : "-Xms512m -Xmx2048m -XX:MaxPermSize=512m",
+    "path" : "C:\\Development\\tools\\Fiddler2;C:\\Program Files\\ShrewSoft\\VPN Client;C:\\Development\\maven\\bin"
+}
