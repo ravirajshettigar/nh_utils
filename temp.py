@@ -1,17 +1,17 @@
 import os
-import datetime as dt
+import sys
+import subprocess
 
-'''stat = os.stat('temp.py')
-temp = str(dt.datetime.now())
-now = dt.datetime.strptime(temp, '%Y-%m-%d %H:%M:%S.%f')
-fileTime = dt.datetime.fromtimestamp(stat.st_mtime)
-print now
-print fileTime
-print now < fileTime'''
+def execWinCommand(command):
+    shellResponse = subprocess.check_output(command, stderr=subprocess.STDOUT)
+    print(shellResponse.decode('utf-8'))
 
-path = "C:\Development\target\src\target"
 
-if "\target" in path:
-    print "Target found"
-else:
-    print "Target not found"
+def readArgumentsFromCommandLine():
+    argsMap = {}
+    for index in range(1, len(sys.argv)):
+        temp = sys.argv[index]
+        arg = temp.split("=")
+        argsMap[arg[0]] = arg[1]
+    return argsMap
+

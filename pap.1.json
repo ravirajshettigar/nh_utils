@@ -1,0 +1,29 @@
+{
+    "file_types": [],
+    "last_run": "2017-07-16 12:02:13.789385",
+    "exclude_folders_for_scanning": [
+        ".svn",
+        ".settings",
+        "target"
+    ],
+    "project_home": "C:\\Projects\\eClipseDev",
+    "carefx_home": "C:\\PrP_Carefx",
+    "extended_path_variable": "C:\\Development\\tools\\Fiddler2;C:\\Program Files\\ShrewSoft\\VPN Client;C:\\Development\\maven\\bin",
+    "enable_catalina_debug": false,
+    "enable_karaf_debug": false,
+    "extended_maven_attributes": "-DVMachine=localhost -DskipTests=true dependency:sources",
+    "enable_fiddler_config": true,
+    "extended_fiddler_config": "-DproxySet=true -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9999",
+    "enable_debug_config": true,
+    "extended_catalina_debug_config": "-Xdebug -Xrunjdwp:transport=dt_socket,address=4711,server=y,suspend=n",
+    "extended_karaf_debug_config": "-Xdebug -Xrunjdwp:transport=dt_socket,address=5711,server=y,suspend=n",
+    "environment_variables": [
+        "servicemix_home=C:\\PrP_Carefx\\Resources\\hsip",
+        "java_home=C:\\Program Files\\Java\\jdk1.7.0_80",
+        "catalina_home=C:\\Development\\servers\\apache_tomcat_pap",
+        "catalina_opts=-Dcarefx.props.dir=%CAREFX_HOME%\\Common\\properties -Dcarefx.common.dir=%CAREFX_HOME%\\Common -Dcarefx.cfgprop.impl=net.carefx.config.filesystem.impl.CfgPropertiesImpl -XX:MaxPermSize=512m -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=4711 -Xms1024m -Xmx2048m -DproxySet=true -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9999",
+        "karaf_opts=",
+        "maven_home=C:\\Development\\maven",
+        "maven_opts=-Xms512m -Xmx2048m -XX:MaxPermSize=512m"
+    ]
+}
