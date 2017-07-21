@@ -38,15 +38,15 @@ def readCredentials(config):
             password = codecs.decode(password, "rot13").replace(hostname, "")
             credentials.append(username)
             credentials.append(password)
-    except FileNotFoundError:
+    except IOError: #python 3.0 - FileNotFoundError while python 2.0 doesnt support the same
         credentials = saveCredentials(config)
     return credentials
 
 def processAuthenticationInfo(config):
     credentials = readCredentials(config)
     if len(credentials) == 2:
-        print("Authentication Info Available")
+        print("Loaded Authentication Info Successfully")
     else:
-        print("There was some problem while reading Authentication Info, System will exit")
+        print("There was some problem while loading Authentication Info, System will exit")
         sys.exit()
     return credentials
