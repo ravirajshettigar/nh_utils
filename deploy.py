@@ -11,7 +11,7 @@ executionTime = dt.datetime.now()
 completeBuildRequired = False
 cleanRequired = False
 appCode = "pap"
-bugId = 9999
+bugId = None
 completeBuild = 'n'
 cleanRequired = 'n'
 
@@ -36,7 +36,7 @@ with open(appCode + '.json', 'r') as config:
 build_script_file = "build.bat"
 deploy_script_file = "deploy.bat"
 useRobocopy = False
-if "bug" in DATA.keys(): 
+if not bugId == None and len(bugId.strip()) > 0: 
     build_script_file = "build_" + bugId + ".bat"
     deploy_script_file = "deploy_" + bugId + ".bat"
 if "enable_robocopy" in DATA.keys():
@@ -46,35 +46,46 @@ credentials = sec.processAuthenticationInfo(DATA) #save credentials to cache or 
 #nhu.startFiddler(DATA) #start fiddler
 #nhu.startShrewsoftVPN(DATA, credentials) #start vpn connection
 
+completeBuildRequired = completeBuild.strip().lower()[0:1] == 'y'
 
-if cleanRequired:
-    print 'test'
+buildScripts.extend(nhu.getEnvironmentVariableScript(DATA)) #set all environment variable
+
+listAllRootModules = nhu.listRootModules(DATA)
+buildScripts.extend(nhu.performSvnUpdate(listAllRootModules))
+
+if completeBuildRequired:    
+    buildScripts.extend(nhu.getMvnInstallCommandScript(listAllRootModules, cleanRequired, DATA)) #execute maven command for modified maven projects
 else:
     listRecentlyModifiedModules, listOfGwtModules, listAllModules = nhu.listRecentlyModifiedModules(DATA) #identify list of recently modified modules and gwt modules
-    buildScripts.extend(nhu.getEnvironmentVariableScript(DATA)) #set all environment variable
     buildScripts.extend(nhu.getMvnInstallCommandScript(listRecentlyModifiedModules, cleanRequired, DATA)) #execute maven command for modified maven projects
-    nhu.writeLineInListToFile(buildScripts, build_script_file)
 
-    #nhu.execWinCommand(build_script_file, "Build Log [" + bugId + "] : " + executionTime)
-    #PART 1 - ends here, which performs the intelligent build for modified projects only
+nhu.writeLineInListToFile(buildScripts, build_script_file)
+#nhu.execWinCommand(build_script_file, "Build Log [" + bugId + "] : " + executionTime)
+
+if completeBuildRequired:
+    tomcatWarDeployScripts = nhu.getTomcatWARDeployScripts(DATA)
+    deployScripts.extend(tomcatWarDeployScripts)
+    hsipProductDeployScript = nhu.getHsipProductDeployScripts(DATA)
+    deployScripts.extend(hsipProductDeployScript)
+    if cleanRequired:
+        nhu.cleanServiceMixCacheScript(DATA)
+else:
     readyToDeployJarFileMap = nhu.listJarFilesFromTargetFolders(listRecentlyModifiedModules)
     tomcatLibDeployScripts = nhu.getTomcatAppDeployScripts(DATA, readyToDeployJarFileMap, listAllModules)
     deployScripts.extend(tomcatLibDeployScripts)
     hsipProductDeployScript = nhu.getHsipProductDeployScripts(DATA, readyToDeployJarFileMap, listAllModules)
     deployScripts.extend(hsipProductDeployScript)
-    #sourceWebFolderList = nhu.listWebFoldersFromTargetFolders(listRecentlyModifiedModules)
-    #targetFolder = "C:\\Users\\Raviraj\\Downloads"
-    #deployScripts.extend(nhu.getCopyPasteFoldersScript(sourceWebFolderList, targetFolder, useRobocopy))
+#sourceWebFolderList = nhu.listWebFoldersFromTargetFolders(listRecentlyModifiedModules)
+#targetFolder = "C:\\Users\\Raviraj\\Downloads"
+#deployScripts.extend(nhu.getCopyPasteFoldersScript(sourceWebFolderList, targetFolder, useRobocopy))
 
-startServicemixScript = nhu.startServiceMix(DATA, cleanRequired)
+startServicemixScript = nhu.startServiceMixScript(DATA)
 deployScripts.extend(startServicemixScript)
 startTomcatScript = nhu.startTomcatScript(DATA)
 deployScripts.extend(startTomcatScript)
 
 nhu.writeLineInListToFile(deployScripts, deploy_script_file)
 #nhu.execWinCommand(deploy_script_file, "Deploy Log [" + bugId + "] : " + executionTime)
-
-#PART 2 - ends here, which performs deployment of build files
 
 #updating the last run variables and resaving it to .json file for next run usage
 DATA['last_run'] = str(dt.datetime.now())

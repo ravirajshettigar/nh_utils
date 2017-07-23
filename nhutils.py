@@ -69,6 +69,20 @@ def listWebFoldersFromTargetFolders(moduleFolderList):
                 break
     return listWebFolders
 
+def listRootModules(config):
+    listAllRootModules = []
+    if "project_home" in config.keys():
+        ROOT_DIR = config["project_home"]
+        for root, subFolders, files in os.walk(ROOT_DIR):
+            for folder in subFolders:               
+                folder_path = root + os.sep + folder
+                pom_xml = folder_path + os.sep + 'pom.xml'
+                src_folder = folder_path + os.sep + 'src' + os.sep + 'main'
+                if os.path.exists(pom_xml) and not os.path.exists(src_folder):
+                    listAllRootModules.append(str(folder_path))
+                    break 
+    return listAllRootModules
+
 def listRecentlyModifiedModules(config):
     listOfModifiedModules = []
     listOfGwtModules = []
@@ -196,19 +210,49 @@ def getServiceMixBundleMappings(config):
                     bundles[fileName] = folder
     return bundles
 
+def performSvnUpdate(listAllRootModules):
+    scripts = []
+    for rootModule in listAllRootModules:
+        scripts.append("cd /d \"" + str(rootModule) + "\"")
+        scripts.append("svn update")
+    return scripts
+
+def deleteExistingWARAndAppFolder(tomcatHome, appName):
+    return [
+        "del /f /s /q \"" + os.path.join(tomcatHome, "webapps", appName + ".war") +"\"",
+        "rmdir /s /q \"" + os.path.join(tomcatHome, "webapps", appName) +"\""
+    ]
+
+
+def getTomcatWARDeployScripts(config):
+    tomcatWARDeployScript = []
+    tomcatHome = getEnvVariableValueFromConfig("catalina_home", config)
+    if "tomcat_deploy_config" in config.keys():
+        for sourceConfig in config["tomcat_deploy_config"]:
+            for module in listAllModules: 
+                deployList = []
+                if module.strip().endswith(os.path.join(sourceConfig["project"], sourceConfig["module"])):
+                    warFile = os.path.join(module, "target", sourceConfig["target"] + ".war")
+                    deployList.append(warFile)
+                    tomcatAppDeployScript.extend(deleteExistingWARAndAppFolder(tomcatHome, sourceConfig["target"]))
+                    tomcatAppDeployScript.extend(getCopyPasteFilesScript(deployList, os.path.join(tomcatHome,"webapps")))
+                break
+    return tomcatAppDeployScript
+
 def getTomcatAppDeployScripts(config, readyToDeployJarFileMap, listAllModules):
     tomcatAppDeployScript = []
     tomcatHome = getEnvVariableValueFromConfig("catalina_home", config)
     if "tomcat_deploy_config" in config.keys():
         for sourceConfig in config["tomcat_deploy_config"]:
             for module in listAllModules:                
-                if module.strip().endswith(os.path.join(sourceConfig["project"], sourceConfig["module"])):                    
+                if module.strip().endswith(os.path.join(sourceConfig["project"], sourceConfig["module"])):
                     pomComponentList = parsePomXML(os.path.join(module, "pom.xml"))
                     deployList = []
                     for jarFile, jarPath in readyToDeployJarFileMap.items():
                         if jarFile in pomComponentList:                            
                             deployList.append(jarPath)                    
                     tomcatAppDeployScript.extend(getCopyPasteFilesScript(deployList, os.path.join(tomcatHome,"webapps", sourceConfig["target"], "WEB-INF", "lib")))
+                break
     return tomcatAppDeployScript
 
 def parsePomXML(pomFilePath):
@@ -232,6 +276,37 @@ def parsePomXML(pomFilePath):
                 version = versionMappings[versionElement.text]  
                 pomComponentList.append(component + "-" + version + ".jar")                
     return pomComponentList
+
+def getHsipProductDeployScripts(config):
+    hsipProductDeployScript = []
+    hsipHome = getEnvVariableValueFromConfig("servicemix_home", config)
+    if "bundle_deploy_config" in config.keys():        
+        for sourceConfig in config["bundle_deploy_config"]:
+             for module in listAllModules:                
+                if module.strip().endswith(os.path.join(sourceConfig["project"], sourceConfig["module"])):
+                    hsipInTargetFolder = identifyHsipDeploySource(module)
+                    featureXml = None
+                    deployFiles = os.listdir(os.path.join(hsipInTargetFolder, "deploy"))
+                    if len(deployFiles) > 1:
+                        for fileName in deployFiles:
+                            if "name_contains" in sourceConfig.keys():
+                                if fileName.find(sourceConfig["name_contains"]) > -1 and fileName.endswith('.xml'):
+                                    featureXml = fileName
+                                    break
+                            elif fileName.endswith(".xml"):                                
+                                    featureXml = fileName
+                                    break                    
+                    if featureXml == None:
+                        print("Failed to locate the feature xml file in " + hsipInTargetFolder + ", System will exit")
+                        continue
+                    hsipProductDeployScript.extend(getCopyPasteFilesScript([os.path.join(os.path.join(hsipInTargetFolder, "deploy"), featureXml)], os.path.join(hsipHome,"deploy")))
+                    deployList = []
+                    productFolder = os.path.join(hsipInTargetFolder, "Carefx", "Products", sourceConfig["target"])
+                    for jarFile in os.listdir(productFolder):
+                        deployList.append(os.path.join(productFolder, jarFile))                    
+                    hsipProductDeployScript.extend(getCopyPasteFilesScript(deployList, os.path.join(hsipHome,"Carefx", "Products", sourceConfig["target"])))
+                break
+    return hsipProductDeployScript
 
 def getHsipProductDeployScripts(config, readyToDeployJarFileMap, listAllModules):
     hsipProductDeployScript = []
@@ -308,23 +383,24 @@ def identifyHsipDeploySource(modulePath):
 def startTomcatScript(config):
     scripts = []
     tomcatHome = getEnvVariableValueFromConfig("catalina_home", config)
-    for fileName in os.listdir(os.path.join(tomcatHome, "webapps")):
-        if fileName.endswith('.war'):
-            scripts.append("del /f /s /q " + os.path.join(tomcatHome, "webapps", fileName))
     scripts.append("del /f /s /q " + os.path.join(tomcatHome, "logs", "*"))
     scripts.append("rmdir /s /q " + os.path.join(tomcatHome, "work", "Catalina"))
     scripts.append("cd /d " + os.path.join(tomcatHome, "bin"))
     scripts.append("start catalina.bat run")
     return scripts
 
-def startServiceMix(config, cleanRequired):
+def startServiceMixScript(config):
     scripts = []
     servicemixHome = getEnvVariableValueFromConfig("servicemix_home", config)
     scripts.append("del /f /s /q " + os.path.join(servicemixHome, "data", "log", "*"))
     scripts.append("del /f /s /q " + os.path.join(servicemixHome, "Carefx", "Common", "logs", "*"))
-    if(cleanRequired):
-        for bundle in os.listdir(os.path.join(servicemixHome, "data", "cache")):
-            scripts.append("rmdir /s /q " + os.path.join(servicemixHome, "data", "cache", bundle))
     scripts.append("cd /d " + os.path.join(servicemixHome, "bin"))
     scripts.append("start servicemix")
+    return scripts
+
+def cleanServiceMixCacheScript(config):
+    scripts = []
+    servicemixHome = getEnvVariableValueFromConfig("servicemix_home", config)
+    for bundle in os.listdir(os.path.join(servicemixHome, "data", "cache")):
+        scripts.append("rmdir /s /q " + os.path.join(servicemixHome, "data", "cache", bundle))
     return scripts
