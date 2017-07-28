@@ -1,0 +1,70 @@
+{
+    "cache_storage": "C:\\Users\\rshettigar", 
+    "enable_debug": true, 
+    "bundle_deploy_config": [
+        {
+            "project": "PatientPortal", 
+            "target": "PatientPortal", 
+            "module": "install"
+        }, 
+        {
+            "project": "PaPRestServices", 
+            "name_contains": "-dev", 
+            "target": "PAPMobile", 
+            "module": "Install"
+        }
+    ], 
+    "mpap_config_name": "raviraj_dev", 
+    "tomcat_deploy_config": [
+        {
+            "project": "PatientPortal", 
+            "target": "patientApp", 
+            "module": "patient-app"
+        }, 
+        {
+            "project": "PatientPortal", 
+            "target": "providerApp", 
+            "module": "provider-app"
+        }
+    ], 
+    "fiddler_executable": "C:\\Program Files (x86)\\Fiddler2\\fiddler.exe", 
+    "extended_karaf_debug_config": "-Xdebug -Xrunjdwp:transport=dt_socket,address=5711,server=y,suspend=n", 
+    "extended_catalina_debug_config": "-Xdebug -Xrunjdwp:transport=dt_socket,address=4711,server=y,suspend=n", 
+    "file_types": [], 
+    "vpn_executable": "C:\\Program Files (x86)\\ShrewSoft VPN\\ipsecc.exe", 
+    "enable_vpn": true, 
+    "bundle_deploy_ext_config": [
+        {
+            "project": "Libraries\\Forms\\Transform", 
+            "target": "PAPMobile"
+        }
+    ], 
+    "enable_karaf_debug": true, 
+    "exclude_folders_for_scanning": [
+        ".svn", 
+        ".settings", 
+        "target"
+    ], 
+    "deploy_script_file": "deploy.bat", 
+    "build_script_file": "build.bat", 
+    "enable_robocopy": true, 
+    "extended_fiddler_config": "-DproxySet=true -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9999", 
+    "enable_catalina_debug": true, 
+    "mpap_project_home": "C:\\PaP\\mobilepap", 
+    "enable_fiddler": true, 
+    "start_mpap": true, 
+    "project_home": "C:\\PaP\\v5.3.6", 
+    "extended_maven_attributes": "-DVMachine=localhost -DskipTests=true dependency:sources", 
+    "last_run": "2017-07-27 05:33:24.519000", 
+    "environment_variables": [
+        "java_home=C:\\Program Files\\Java\\jdk1.7.0_80", 
+        "catalina_home=C:\\PaP_Servers\\v5.3.6\\apache_tomcat", 
+        "maven_home=C:\\Development\\maven", 
+        "maven_opts=-Xms512m -Xmx2048m -XX:MaxPermSize=512m", 
+        "carefx_home=C:\\PaP_Carefx", 
+        "servicemix_home=C:\\PaP_Carefx\\v5.3.6\\Resources\\hsip-base-5.3.5-SNAPSHOT", 
+        "catalina_opts=-Dcarefx.props.dir=%CAREFX_HOME%\\Common\\properties -Dcarefx.common.dir=%CAREFX_HOME%\\Common -Dcarefx.cfgprop.impl=net.carefx.config.filesystem.impl.CfgPropertiesImpl -XX:MaxPermSize=512m -Xms1024m -Xmx2048m", 
+        "karaf_opts="
+    ], 
+    "extended_path_variable": "C:\\Development\\maven\\bin;C:\\Program Files\\Java\\jdk1.7.0_80\\bin"
+}

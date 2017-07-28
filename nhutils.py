@@ -69,24 +69,35 @@ def listWebFoldersFromTargetFolders(moduleFolderList):
                 break
     return listWebFolders
 
-def listRootModules(config):
+def listRootModules(ROOT_DIR, EXCLUDE_FOLDERS):    
     listAllRootModules = []
-    if "project_home" in config.keys():
-        ROOT_DIR = config["project_home"]
-        for root, subFolders, files in os.walk(ROOT_DIR):
-            for folder in subFolders:               
-                folder_path = root + os.sep + folder
-                pom_xml = folder_path + os.sep + 'pom.xml'
-                src_folder = folder_path + os.sep + 'src' + os.sep + 'main'
-                if os.path.exists(pom_xml) and not os.path.exists(src_folder):
-                    listAllRootModules.append(str(folder_path))
-                    break 
+    for folder in os.listdir(ROOT_DIR):             
+        folder_path = os.path.join(ROOT_DIR, folder)
+        pom_xml = folder_path + os.sep + 'pom.xml'        
+        if os.path.exists(pom_xml):
+            listAllRootModules.append(str(folder_path))
+        else:
+            listAllRootModules.extend(listRootModules(folder_path, EXCLUDE_FOLDERS))
     return listAllRootModules
+
+def listAllModules(ROOT_DIR, EXCLUDE_FOLDERS):
+    listAllModules = []              
+    for root, subFolders, files in os.walk(ROOT_DIR):            
+        for exFolder in EXCLUDE_FOLDERS:
+            if exFolder in subFolders:
+                subFolders.remove(exFolder)
+        for folder in subFolders:               
+            folder_path = root + os.sep + folder            
+            is_gwt_project =False
+            pom_xml = folder_path + os.sep + 'pom.xml'
+            src_folder = folder_path + os.sep + 'src' + os.sep + 'main'
+            if os.path.exists(pom_xml) and os.path.exists(src_folder):
+                listAllModules.append(str(folder_path))                                 
+    return listAllModules
 
 def listRecentlyModifiedModules(config):
     listOfModifiedModules = []
     listOfGwtModules = []
-    listAllModules = []
 
     if "project_home" in config.keys() and "exclude_folders_for_scanning" in config.keys():
         ROOT_DIR = config["project_home"]
@@ -106,10 +117,9 @@ def listRecentlyModifiedModules(config):
             for folder in subFolders:               
                 folder_path = root + os.sep + folder            
                 is_gwt_project =False
-                pom_xml = folder_path + os.sep + 'pom.xml'
-                src_folder = folder_path + os.sep + 'src' + os.sep + 'main'
+                pom_xml = folder_path + os.sep + 'pom.xml'                
+                src_folder = folder_path + os.sep + 'src' + os.sep + 'main'                
                 if os.path.exists(pom_xml) and os.path.exists(src_folder):
-                    listAllModules.append(str(folder_path))
                     for s_root, s_subFolders, s_files in os.walk(folder_path):                        
                         for exFolder in EXCLUDE_FOLDERS:
                             if exFolder in s_subFolders:
@@ -131,7 +141,7 @@ def listRecentlyModifiedModules(config):
                                         listOfModifiedModules.append(str(folder_path))
                                         break
                             continue               
-    return listOfModifiedModules, listOfGwtModules, listAllModules
+    return listOfModifiedModules, listOfGwtModules
 
 def getEnvironmentVariableScript(config): 
     scriptSteps = []
@@ -181,7 +191,8 @@ def getMvnInstallCommandScript(mavenProjectFolderList, cleanRequired, config):
     if cleanRequired: clean = "clean "
     if "extended_maven_attributes" in config.keys(): extended_maven_attributes = config["extended_maven_attributes"]
     for mvnProject in mavenProjectFolderList:
-        scripts.append("mvn " + clean + "install " + mvnProject + " -am " + extended_maven_attributes)
+        scripts.append("cd /d \"" + mvnProject + "\"")
+        scripts.append("mvn " + clean + "install -am " + extended_maven_attributes)
     return scripts
 
 def getEnvVariableValueFromConfig(envVar, config):
@@ -224,7 +235,7 @@ def deleteExistingWARAndAppFolder(tomcatHome, appName):
     ]
 
 
-def getTomcatWARDeployScripts(config):
+def getTomcatWARDeployScripts(config, listAllModules):
     tomcatWARDeployScript = []
     tomcatHome = getEnvVariableValueFromConfig("catalina_home", config)
     if "tomcat_deploy_config" in config.keys():
@@ -234,10 +245,10 @@ def getTomcatWARDeployScripts(config):
                 if module.strip().endswith(os.path.join(sourceConfig["project"], sourceConfig["module"])):
                     warFile = os.path.join(module, "target", sourceConfig["target"] + ".war")
                     deployList.append(warFile)
-                    tomcatAppDeployScript.extend(deleteExistingWARAndAppFolder(tomcatHome, sourceConfig["target"]))
-                    tomcatAppDeployScript.extend(getCopyPasteFilesScript(deployList, os.path.join(tomcatHome,"webapps")))
-                break
-    return tomcatAppDeployScript
+                    tomcatWARDeployScript.extend(deleteExistingWARAndAppFolder(tomcatHome, sourceConfig["target"]))
+                    tomcatWARDeployScript.extend(getCopyPasteFilesScript(deployList, os.path.join(tomcatHome,"webapps")))
+                    break
+    return tomcatWARDeployScript
 
 def getTomcatAppDeployScripts(config, readyToDeployJarFileMap, listAllModules):
     tomcatAppDeployScript = []
@@ -277,7 +288,7 @@ def parsePomXML(pomFilePath):
                 pomComponentList.append(component + "-" + version + ".jar")                
     return pomComponentList
 
-def getHsipProductDeployScripts(config):
+def getHsipProductDeployScripts(config, listAllModules):
     hsipProductDeployScript = []
     hsipHome = getEnvVariableValueFromConfig("servicemix_home", config)
     if "bundle_deploy_config" in config.keys():        
@@ -302,13 +313,28 @@ def getHsipProductDeployScripts(config):
                     hsipProductDeployScript.extend(getCopyPasteFilesScript([os.path.join(os.path.join(hsipInTargetFolder, "deploy"), featureXml)], os.path.join(hsipHome,"deploy")))
                     deployList = []
                     productFolder = os.path.join(hsipInTargetFolder, "Carefx", "Products", sourceConfig["target"])
-                    for jarFile in os.listdir(productFolder):
-                        deployList.append(os.path.join(productFolder, jarFile))                    
+                    #for jarFile in os.listdir(productFolder):
+                    deployList.append(os.path.join(productFolder, "*.jar"))                    
                     hsipProductDeployScript.extend(getCopyPasteFilesScript(deployList, os.path.join(hsipHome,"Carefx", "Products", sourceConfig["target"])))
-                break
+                    break    
     return hsipProductDeployScript
 
-def getHsipProductDeployScripts(config, readyToDeployJarFileMap, listAllModules):
+def getHsipExtendedProjectDeployScripts(config, listAllModules):
+    hsipExtendedProjectDeployScript = []
+    hsipHome = getEnvVariableValueFromConfig("servicemix_home", config)
+    if "bundle_deploy_ext_config" in config.keys():        
+        for sourceConfig in config["bundle_deploy_ext_config"]:
+             for module in listAllModules:                
+                if module.strip().endswith(os.path.join(sourceConfig["project"])):                    
+                    deployList = []
+                    productFolder = os.path.join(module,  "target")
+                    #for jarFile in os.listdir(productFolder):
+                    deployList.append(os.path.join(productFolder, "*.jar"))           
+                    hsipExtendedProjectDeployScript.extend(getCopyPasteFilesScript(deployList, os.path.join(hsipHome,"Carefx", "Products", sourceConfig["target"])))
+                    break
+    return hsipExtendedProjectDeployScript
+
+def getHsipProductAllJarsDeployScripts(config, readyToDeployJarFileMap, listAllModules):
     hsipProductDeployScript = []
     hsipHome = getEnvVariableValueFromConfig("servicemix_home", config)
     bundleMappings = getServiceMixBundleMappings(config)
@@ -401,6 +427,14 @@ def startServiceMixScript(config):
 def cleanServiceMixCacheScript(config):
     scripts = []
     servicemixHome = getEnvVariableValueFromConfig("servicemix_home", config)
-    for bundle in os.listdir(os.path.join(servicemixHome, "data", "cache")):
-        scripts.append("rmdir /s /q " + os.path.join(servicemixHome, "data", "cache", bundle))
+    #for bundle in os.listdir(os.path.join(servicemixHome, "data", "cache")):
+    scripts.append("rmdir /s /q " + os.path.join(servicemixHome, "data", "cache"))
+    return scripts
+
+def startMPAP(config):
+    scripts = []
+    if "mpap_project_home" in config.keys() and "mpap_config_name" in config.keys():
+        scripts.append("cd /d " + config["mpap_project_home"])
+        scripts.append("git pull")
+        scripts.append("start grunt serve --config " + config["mpap_config_name"])
     return scripts

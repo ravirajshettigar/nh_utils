@@ -1,0 +1,10 @@
+INFO 2017-07-24 05:57:52,036 - My Info message
+DEBUG 2017-07-24 05:57:52,036 - My Debug message
+ERROR 2017-07-24 05:57:52,049 - My Error message
+WARNING 2017-07-24 05:57:52,051 - My Warning message
+CRITICAL 2017-07-24 05:57:52,052 - My Critical message
+INFO 2017-07-24 05:58:13,832 - My Info message
+DEBUG 2017-07-24 05:58:13,832 - My Debug message
+ERROR 2017-07-24 05:58:13,834 - My Error message
+WARNING 2017-07-24 05:58:13,834 - My Warning message
+CRITICAL 2017-07-24 05:58:13,835 - My Critical message
