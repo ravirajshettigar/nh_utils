@@ -80,68 +80,58 @@ def listRootModules(ROOT_DIR, EXCLUDE_FOLDERS):
             listAllRootModules.extend(listRootModules(folder_path, EXCLUDE_FOLDERS))
     return listAllRootModules
 
-def listAllModules(ROOT_DIR, EXCLUDE_FOLDERS):
-    listAllModules = []              
-    for root, subFolders, files in os.walk(ROOT_DIR):            
-        for exFolder in EXCLUDE_FOLDERS:
-            if exFolder in subFolders:
-                subFolders.remove(exFolder)
-        for folder in subFolders:               
-            folder_path = root + os.sep + folder            
-            is_gwt_project =False
-            pom_xml = folder_path + os.sep + 'pom.xml'
-            src_folder = folder_path + os.sep + 'src' + os.sep + 'main'
-            if os.path.exists(pom_xml) and os.path.exists(src_folder):
-                listAllModules.append(str(folder_path))                                 
-    return listAllModules
+def listAllSubModules(listRootModules, EXCLUDE_FOLDERS):
+    listSubModules = []
+    for rootModule in listRootModules:
+        fileList = os.listdir(rootModule)
+        subFolderList = []
+        pom_xml = os.path.join(rootModule,'pom.xml')
+        src_main = os.path.join(rootModule, 'src', 'main')
+        if os.path.exists(pom_xml) and os.path.exists(src_main):
+            listSubModules.append(rootModule)            
+        for aFile in fileList:
+            file_path = os.path.join(rootModule, aFile)
+            if os.path.isdir(file_path) and not aFile in EXCLUDE_FOLDERS:
+                if not aFile in EXCLUDE_FOLDERS:
+                    subFolderList.append(file_path)
+        listSubModules.extend(listAllSubModules(subFolderList, EXCLUDE_FOLDERS))
+    return listSubModules
 
-def listRecentlyModifiedModules(config):
+def checkForFileCreationAndModifications(pathToFolder, last_run):
+    for root, subFolders, files in os.walk(pathToFolder):
+        for anyFile in files:
+            anyExt = anyFile[anyFile.find('.'):]            
+            if anyExt in ['.java', '.xml', '.ui.xml', '.gwt.xml', '.properties']:
+                filePath = os.path.join(root, anyFile)            
+                if os.path.isfile(filePath):
+                    fileStat = os.stat(filePath)                    
+                    modifiedTime = dt.datetime.fromtimestamp(fileStat.st_mtime)
+                    createdTime = dt.datetime.fromtimestamp(fileStat.st_ctime)                    
+                    if last_run < createdTime or last_run < modifiedTime:                    
+                        return True
+    return False
+
+def checkForGwtModule(pathToFolder):
+    for root, subfolders, files in os.walk(pathToFolder):
+        for anyFile in files:
+            file_path = os.path.join(root, anyFile)
+            if anyFile.lower().endswith('.gwt.xml'):
+                return True
+    return False
+
+def filterGwtModules(listAllModules):    
+    listGwtModules = []    
+    for path in listAllModules:
+        if checkForGwtModule(path):
+            listGwtModules.append(path)        
+    return listGwtModules
+
+def listRecentlyModifiedModules(listSubModules, EXCLUDE_FOLDERS, LAST_RUN):
     listOfModifiedModules = []
-    listOfGwtModules = []
-
-    if "project_home" in config.keys() and "exclude_folders_for_scanning" in config.keys():
-        ROOT_DIR = config["project_home"]
-        
-        EXCLUDE_FOLDERS = config["exclude_folders_for_scanning"]
-
-        if "last_run" in config.keys() and bool(config["last_run"].strip()): 
-            last_run = dt.datetime.strptime(config["last_run"], '%Y-%m-%d %H:%M:%S.%f')
-        else:
-            last_run = dt.datetime.now() - dt.timedelta(days=365)
-            
-        for root, subFolders, files in os.walk(ROOT_DIR):            
-            for exFolder in EXCLUDE_FOLDERS:
-                if exFolder in subFolders:
-                    subFolders.remove(exFolder)
-
-            for folder in subFolders:               
-                folder_path = root + os.sep + folder            
-                is_gwt_project =False
-                pom_xml = folder_path + os.sep + 'pom.xml'                
-                src_folder = folder_path + os.sep + 'src' + os.sep + 'main'                
-                if os.path.exists(pom_xml) and os.path.exists(src_folder):
-                    for s_root, s_subFolders, s_files in os.walk(folder_path):                        
-                        for exFolder in EXCLUDE_FOLDERS:
-                            if exFolder in s_subFolders:
-                                s_subFolders.remove(exFolder)
-
-                        for s_folder in s_subFolders:                        
-                            if not folder_path in listOfGwtModules:
-                                for s_file in s_files:
-                                    if s_file.endswith(".gwt.xml"):
-                                        listOfGwtModules.append(str(folder_path))
-                                        break
-                            if not folder_path in listOfModifiedModules:     
-                                for s_file in s_files:
-                                    file_path = s_root + os.sep + s_file
-                                    file_stat = os.stat(file_path)
-                                    mtime = dt.datetime.fromtimestamp(file_stat.st_mtime)  
-                                    ctime = dt.datetime.fromtimestamp(file_stat.st_ctime)                            
-                                    if last_run < mtime or last_run < ctime:
-                                        listOfModifiedModules.append(str(folder_path))
-                                        break
-                            continue               
-    return listOfModifiedModules, listOfGwtModules
+    for module in listSubModules:
+        if checkForFileCreationAndModifications(os.path.join(module, 'src'), LAST_RUN):
+            listOfModifiedModules.append(module)    
+    return listOfModifiedModules
 
 def getEnvironmentVariableScript(config): 
     scriptSteps = []
@@ -153,6 +143,8 @@ def getEnvironmentVariableScript(config):
         envSetList = config["environment_variables"]
         for envSet in envSetList:
             scriptSteps.append("set \"" + envSet + "\"")
+            sepIdx = envSet.find('=')
+            scriptSteps.append("setx /m " + envSet[0:sepIdx] + " \"" + envSet[sepIdx+1:] + "\"")
     
     if "enable_fiddler" in config.keys() and "extended_fiddler_config" in config.keys():
         scriptSteps.append("set \"catalina_opts=%catalina_opts% " + config["extended_fiddler_config"] + "\"")
@@ -249,6 +241,35 @@ def getTomcatWARDeployScripts(config, listAllModules):
                     tomcatWARDeployScript.extend(getCopyPasteFilesScript(deployList, os.path.join(tomcatHome,"webapps")))
                     break
     return tomcatWARDeployScript
+
+def getTomcatWebProjectBuildScripts(allModules, cleanRequired, config):    
+    scripts = []
+    clean = ""
+    if cleanRequired: clean = "clean "
+    if "extended_maven_attributes" in config.keys(): extended_maven_attributes = config["extended_maven_attributes"]
+    if "tomcat_deploy_config" in config.keys():
+        for sourceConfig in config["tomcat_deploy_config"]:
+            for module in allModules: 
+                if module.strip().endswith(os.path.join(sourceConfig["project"], sourceConfig["module"])):
+                   scripts.append("cd /d \"" + module + "\"")
+                   scripts.append("mvn " + clean + "install -am " + extended_maven_attributes)
+    return scripts
+
+def getTomcatWebDeployScripts(config, listAllModules):
+    tomcatWebDeployScript = []
+    tomcatHome = getEnvVariableValueFromConfig("catalina_home", config)
+    if "tomcat_deploy_config" in config.keys():
+        for sourceConfig in config["tomcat_deploy_config"]:
+            for module in listAllModules: 
+                deployList = []
+                if module.strip().endswith(os.path.join(sourceConfig["project"], sourceConfig["module"])):
+                    for obj in os.listdir(os.path.join(module, "target")):
+                        if obj.startswith(sourceConfig["target"]) and os.path.isdir(os.path.join(module, "target", obj)):
+                            webFolder = os.path.join(module, "target", obj, "*")
+                            deployList.append(webFolder)
+                            tomcatWebDeployScript.extend(getCopyPasteFilesScript(deployList, os.path.join(tomcatHome,"webapps", sourceConfig["target"])))
+                    break
+    return tomcatWebDeployScript
 
 def getTomcatAppDeployScripts(config, readyToDeployJarFileMap, listAllModules):
     tomcatAppDeployScript = []

@@ -14,11 +14,7 @@
             "module": "Install"
         }
     ], 
-    "exclude_folders_for_scanning": [
-        ".svn", 
-        ".settings", 
-        "target"
-    ], 
+    "mpap_config_name": "raviraj_dev", 
     "tomcat_deploy_config": [
         {
             "project": "PatientPortal", 
@@ -44,25 +40,29 @@
         }
     ], 
     "enable_karaf_debug": true, 
+    "exclude_folders_for_scanning": [
+        ".svn", 
+        ".settings", 
+        "target"
+    ], 
     "deploy_script_file": "deploy.bat", 
     "build_script_file": "build.bat", 
     "enable_robocopy": true, 
     "extended_fiddler_config": "-DproxySet=true -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9999", 
     "enable_catalina_debug": true, 
+    "mpap_project_home": "C:\\PaP\\mobilepap", 
     "enable_fiddler": true, 
+    "start_mpap": true, 
     "project_home": "C:\\PaP\\v5.4.0", 
-    "mpap_project_home": "C:\\PaP\\mobilepap",
-    "start_mpap": true,
-    "mpap_config_name": "raviraj_dev",
     "extended_maven_attributes": "-DVMachine=localhost -DskipTests=true dependency:sources", 
-    "last_run": "2017-07-27 05:19:52.997000", 
+    "last_run": "2017-08-01 11:43:51.062000", 
     "environment_variables": [
         "java_home=C:\\Program Files\\Java\\jdk1.7.0_80", 
         "catalina_home=C:\\PaP_Servers\\v5.4.0\\apache_tomcat", 
         "maven_home=C:\\Development\\maven", 
         "maven_opts=-Xms512m -Xmx2048m -XX:MaxPermSize=512m", 
         "carefx_home=C:\\PaP_Carefx", 
-        "servicemix_home=C:\\PaP_Carefx\\v5.4.0\\Resources\\hsip-base-5.3.5-SNAPSHOT", 
+        "servicemix_home=C:\\PaP_Carefx\\v5.4.0\\Resources\\hsip-base-5.4.0-SNAPSHOT", 
         "catalina_opts=-Dcarefx.props.dir=%CAREFX_HOME%\\Common\\properties -Dcarefx.common.dir=%CAREFX_HOME%\\Common -Dcarefx.cfgprop.impl=net.carefx.config.filesystem.impl.CfgPropertiesImpl -XX:MaxPermSize=512m -Xms1024m -Xmx2048m", 
         "karaf_opts="
     ], 

@@ -11,7 +11,7 @@ deployScripts = []
 executionTime = dt.datetime.now()
 cleanRequired = True
 completeBuildRequired = True
-appCode = "prp_5.4.0"
+appCode = "pap_5.4.0"
 bugId = '111'
 completeBuild = 'n'
 
@@ -61,20 +61,25 @@ if "project_home" in DATA.keys():
     EXCLUDE_FOLDERS = []
     if "exclude_folders_for_scanning" in DATA.keys():
         EXCLUDE_FOLDERS = DATA["exclude_folders_for_scanning"]
+    if "last_run" in DATA.keys() and bool(DATA["last_run"].strip()): 
+        last_run = dt.datetime.strptime(DATA["last_run"], '%Y-%m-%d %H:%M:%S.%f')
+    else:
+        last_run = dt.datetime.now() - dt.timedelta(days=365)
 else:
     logger.getLogger().error("Couldnot find project_home configuration. This configuration is mandatory. Hence, system will exit. ")
     sys.exit()
 
 logger.getLogger().info("Initiated process of generating Build script")
-listAllRootModules = nhu.listRootModules(ROOT_DIR, EXCLUDE_FOLDERS)
-listAllModules = nhu.listAllModules(ROOT_DIR, EXCLUDE_FOLDERS)
-buildScripts.extend(nhu.performSvnUpdate(listAllRootModules))
+rootModules = nhu.listRootModules(ROOT_DIR, EXCLUDE_FOLDERS)
+allSubModules = nhu.listAllSubModules(rootModules, EXCLUDE_FOLDERS)
+buildScripts.extend(nhu.performSvnUpdate(rootModules))
 
 if completeBuildRequired:    
-    buildScripts.extend(nhu.getMvnInstallCommandScript(listAllRootModules, cleanRequired, DATA)) #execute maven command for modified maven projects
+    buildScripts.extend(nhu.getMvnInstallCommandScript(allSubModules, cleanRequired, DATA)) #execute maven command for modified maven projects
 else:
-    listRecentlyModifiedModules, listOfGwtModules = nhu.listRecentlyModifiedModules(DATA) #identify list of recently modified modules and gwt modules
-    buildScripts.extend(nhu.getMvnInstallCommandScript(listRecentlyModifiedModules, cleanRequired, DATA)) #execute maven command for modified maven projects
+    modifiedModules = nhu.listRecentlyModifiedModules(allSubModules, EXCLUDE_FOLDERS, last_run) #identify list of recently modified modules and gwt modules
+    buildScripts.extend(nhu.getMvnInstallCommandScript(modifiedModules, cleanRequired, DATA)) #execute maven command for modified maven projects       
+    buildScripts.extend(nhu.getTomcatWebProjectBuildScripts(allSubModules, cleanRequired, DATA))
 
 nhu.writeLineInListToFile(buildScripts, build_script_file)
 #nhu.execWinCommand(build_script_file, "Build Log [" + bugId + "] : " + executionTime)
@@ -82,19 +87,20 @@ logger.getLogger().info("Build script has been generated")
 
 logger.getLogger().info("Initiated process of generating Deploy script")
 if completeBuildRequired:
-    tomcatWarDeployScripts = nhu.getTomcatWARDeployScripts(DATA, listAllModules)
+    tomcatWarDeployScripts = nhu.getTomcatWARDeployScripts(DATA, allSubModules)
     deployScripts.extend(tomcatWarDeployScripts)
-    hsipProductDeployScript = nhu.getHsipProductDeployScripts(DATA, listAllModules)
+    hsipProductDeployScript = nhu.getHsipProductDeployScripts(DATA, allSubModules)
     deployScripts.extend(hsipProductDeployScript)
-    hsipExtendedProjectDeployScript = nhu.getHsipExtendedProjectDeployScripts(DATA, listAllModules)
+    hsipExtendedProjectDeployScript = nhu.getHsipExtendedProjectDeployScripts(DATA, allSubModules)
     deployScripts.extend(hsipExtendedProjectDeployScript)
     if cleanRequired:
         deployScripts.extend(nhu.cleanServiceMixCacheScript(DATA))
 else:
-    readyToDeployJarFileMap = nhu.listJarFilesFromTargetFolders(listRecentlyModifiedModules)
-    tomcatLibDeployScripts = nhu.getTomcatAppDeployScripts(DATA, readyToDeployJarFileMap, listAllModules)
+    readyToDeployJarFileMap = nhu.listJarFilesFromTargetFolders(modifiedModules)           
+    tomcatLibDeployScripts = nhu.getTomcatAppDeployScripts(DATA, readyToDeployJarFileMap, allSubModules)    
+    tomcatWebDeployScripts = nhu.getTomcatWebDeployScripts(DATA, allSubModules)
     deployScripts.extend(tomcatLibDeployScripts)
-    hsipProductDeployScript = nhu.getHsipProductAllJarsDeployScripts(DATA, readyToDeployJarFileMap, listAllModules)
+    hsipProductDeployScript = nhu.getHsipProductAllJarsDeployScripts(DATA, readyToDeployJarFileMap, allSubModules)
     deployScripts.extend(hsipProductDeployScript)
 #sourceWebFolderList = nhu.listWebFoldersFromTargetFolders(listRecentlyModifiedModules)
 #targetFolder = "C:\\Users\\Raviraj\\Downloads"
